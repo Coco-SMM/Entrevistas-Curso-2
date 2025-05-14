@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Agenda Entrevistas - Taller de Traducción</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 20px;
+      max-width: 700px;
+      margin: auto;
+      background-color: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+    }
+    input, select, button {
+      padding: 10px;
+      margin: 5px 0 15px 0;
+      width: 100%;
+      box-sizing: border-box;
+      font-size: 1em;
+    }
+    button {
+      background-color: #007bff;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    .confidencial {
+      font-size: 0.9em;
+      color: gray;
+      margin-top: 30px;
+    }
+    #mensaje {
+      font-weight: bold;
+      margin-top: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>Agendar Entrevista - Taller de Traducción vía Zoom</h1>
+  <p><strong>Días disponibles:</strong> 10, 12, 17 y 19 de junio de 2025.<br>
+     <strong>Horario:</strong> de 7:00 p.m. a 9:00 p.m. (duración: 20 o 30 minutos).</p>
+
+  <form id="form">
+    <label for="nombre">Nombre:</label>
+    <input type="text" id="nombre" required />
+
+    <label for="profesion">Profesión:</label>
+    <input type="text" id="profesion" required />
+
+    <label for="fecha">Fecha:</label>
+    <select id="fecha" required>
+      <option value="">Selecciona fecha</option>
+      <option value="2025-06-10">10 de junio</option>
+      <option value="2025-06-12">12 de junio</option>
+      <option value="2025-06-17">17 de junio</option>
+      <option value="2025-06-19">19 de junio</option>
+    </select>
+
+    <label for="hora">Hora:</label>
+    <select id="hora" required>
+      <option value="">Selecciona una fecha primero</option>
+    </select>
+
+    <label for="duracion">Duración:</label>
+    <select id="duracion">
+      <option value="20">20 minutos</option>
+      <option value="30">30 minutos</option>
+    </select>
+
+    <button type="submit">Agendar Entrevista</button>
+  </form>
+
+  <p id="mensaje"></p>
+
+  <p class="confidencial">
+    Los datos que contenga la aplicación son confidenciales y nadie puede verlos ni hacer uso de ellos. 
+    Son únicamente para fines de registrarse para la entrevista.
+  </p>
+
+  <script>
+    const horas = [
+      "19:00", "19:20", "19:30", "19:50",
+      "20:00", "20:20", "20:30", "20:50"
+    ];
+
+    const endpoint = 'TU_URL_DEL_SCRIPT'; // ← Cambia esto por la URL real del Google Apps Script
+
+    const horaSelect = document.getElementById('hora');
+    const fechaSelect = document.getElementById('fecha');
+    const mensaje = document.getElementById('mensaje');
+
+    async function cargarHorarios(fecha) {
+      horaSelect.innerHTML = '<option value="">Cargando horarios...</option>';
+      try {
+        const res = await fetch(endpoint);
+        const ocupados = await res.json();
+
+        horaSelect.innerHTML = '<option value="">Selecciona hora</option>';
+        horas.forEach(hora => {
+          const yaOcupado = ocupados.some(slot => slot.fecha === fecha && slot.hora === hora);
+          const opt = document.createElement('option');
+          opt.value = hora;
+          opt.textContent = hora + (yaOcupado ? ' (Ocupado)' : '');
+          if (yaOcupado) opt.disabled = true;
+          horaSelect.appendChild(opt);
+        });
+      } catch (error) {
+        horaSelect.innerHTML = '<option value="">Error al cargar horarios</option>';
+      }
+    }
+
+    fechaSelect.addEventListener('change', () => {
+      const fecha = fechaSelect.value;
+      if (fecha) {
+        cargarHorarios(fecha);
+      } else {
+        horaSelect.innerHTML = '<option value="">Selecciona una fecha primero</option>';
+      }
+    });
+
+    document.getElementById('form').addEventListener('submit', async (e) => {
+      e.preventDefault();
+
+      const data = {
+        nombre: document.getElementById('nombre').value.trim(),
+        profesion: document.getElementById('profesion').value.trim(),
+        fecha: document.getElementById('fecha').value,
+        hora: document.getElementById('hora').value,
+        duracion: document.getElementById('duracion').value
+      };
+
+      try {
+        const res = await fetch(endpoint, {
+          method: 'POST',
+          body: JSON.stringify(data),
+          headers: {
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const result = await res.json();
+        mensaje.textContent = result.message;
+        mensaje.style.color = result.status === 'success' ? 'green' : 'red';
+
+        if (result.status === 'success') {
+          document.getElementById('form').reset();
+          horaSelect.innerHTML = '<option value="">Selecciona una fecha primero</option>';
+        }
+      } catch (err) {
+        mensaje.textContent = 'Error al enviar los datos. Intenta más tarde.';
+        mensaje.style.color = 'red';
+      }
+    });
+  </script>
+</body>
+</html>
